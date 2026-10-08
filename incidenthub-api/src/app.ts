@@ -7,6 +7,9 @@ import incidentRoutes from "./routes/incident.routes";
 
 const app = express();
 
+app.disable("x-powered-by");
+app.use(loggerMiddleware);
+app.use(requestInfoMiddleware);
 app.use(express.json());
 
 // ── Middlewares globales (Persona 3 - Infraestructura) ──────────────────────
