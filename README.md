@@ -257,5 +257,4 @@ Los errores también salen siempre con el mismo formato, porque pasan por un ún
 Y es más fácil probar y explicar cada pieza por separado.
 
 ## Evidencias de pruebas
-
-Ver la carpeta `evidencias/` con las 20 pruebas mínimas (Postman o cURL).
+ejecutar el comando en una terminal 2 ADMIN=token-admin-001 TECH=token-tecnico-001 bash pruebas.sh
