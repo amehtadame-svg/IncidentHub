@@ -1,29 +1,39 @@
-import type { ErrorRequestHandler } from 'express';
-import { AppError } from '../errors/app-error';
+import { NextFunction, Request, Response } from "express";
+import { AppError } from "../errors/app-error";
 
-export const errorMiddleware: ErrorRequestHandler = (
-  error: unknown,
-  req,
-  res,
-  _next,
-) => {
-  if (error instanceof AppError) {
-    res.status(error.statusCode).json({ ok: false, message: error.message });
+/**
+ * Middleware centralizado de errores (Persona 3 - Infraestructura, 8 pts con AppError).
+ *
+ * Debe registrarse SIEMPRE al final de app.ts, DESPUES de todas las rutas y
+ * del notFoundMiddleware:
+ *   app.use(notFoundMiddleware);
+ *   app.use(errorMiddleware); // <- ultimo
+ *
+ * Comportamiento:
+ *   - AppError (operacional): responde con su statusCode y mensaje
+ *   - Cualquier otro Error: loguea el stack y responde 500 generico
+ *     (nunca se filtran detalles internos al cliente)
+ *
+ * Contrato de respuesta de error (para frontend/P4):
+ *   { "status": "error", "message": "<mensaje>" }
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const errorMiddleware = (err: Error, req: Request, res: Response, _next: NextFunction): void => {
+  if (err instanceof AppError) {
+    // eslint-disable-next-line no-console
+    console.error(`[AppError] ${req.method} ${req.originalUrl} -> ${err.statusCode} | ${err.message}`);
+    res.status(err.statusCode).json({
+      status: "error",
+      message: err.message,
+    });
     return;
   }
 
-  if (
-    error instanceof SyntaxError &&
-    'type' in error &&
-    error.type === 'entity.parse.failed'
-  ) {
-    res.status(400).json({ ok: false, message: 'Invalid JSON body' });
-    return;
-  }
-
-  console.error(
-    `[${req.requestInfo?.timestamp ?? new Date().toISOString()}]`,
-    error,
-  );
-  res.status(500).json({ ok: false, message: 'Internal server error' });
+  // Error inesperado (bug): no exponer detalles internos al cliente
+  // eslint-disable-next-line no-console
+  console.error(`[Error interno] ${req.method} ${req.originalUrl} | ${err.stack ?? err.message}`);
+  res.status(500).json({
+    status: "error",
+    message: "Error interno del servidor",
+  });
 };
