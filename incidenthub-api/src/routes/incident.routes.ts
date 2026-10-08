@@ -8,39 +8,39 @@ import { validatePriority } from "../middlewares/validate-priority.middleware";
 import { validateTime } from "../middlewares/validate-time.middleware";
 
 /**
- * Definición de rutas y orden de middlewares (Persona 4 - 35 pts).
+ * Rutas de incidentes (Persona 4): define el ORDEN de los middlewares.
  *
- * Middlewares de validación: entrega REAL de P2 (ramas ameht + Cristian).
- * PATCH /:id/status usa patchIncidentStatus de P2 (Reto 5, transiciones
- * estrictas OPEN -> IN_PROGRESS -> RESOLVED).
- *
- * ⚠️ ORDEN CRÍTICO: las rutas estáticas de los retos (/critical, /pending,
- * /stats) van ANTES de /:id; si no, Express las capturaría como si fueran
- * un id y nunca llegarían al controller.
+ * - Lecturas (GET): públicas, como en los cURL del enunciado.
+ * - Escrituras (POST/PUT/PATCH/DELETE): requieren token (auth).
+ * - DELETE: además requiere rol admin.
+ * - /critical, /pending y /stats van ANTES de /:id; si no, Express los
+ *   interpretaría como un id y validateId respondería 400.
  */
 const router = Router();
 
-// Todas las rutas de incidentes requieren autenticación (Persona 3)
-router.use(authMiddleware);
+// Consultas fijas (retos 1, 2 y 3) — siempre antes de /:id
+router.get("/critical", controller.getCritical);
+router.get("/pending", controller.getPending);
+router.get("/stats", controller.getStats);
 
-// ── Retos de consulta (siempre antes de /:id) ───────────────────────────────
-router.get("/critical", controller.getCritical); // Reto 1
-router.get("/pending", controller.getPending); // Reto 2
-router.get("/stats", controller.getStats); // Reto 3
-
-// ── CRUD completo ───────────────────────────────────────────────────────────
+// CRUD
 router.get("/", controller.getAll);
 router.get("/:id", validateId, controller.getById);
-router.post("/", validateIncident, validatePriority, validateTime, controller.create);
+
+router.post("/", authMiddleware, validateIncident, validatePriority, validateTime, controller.create);
+
 router.put(
   "/:id",
+  authMiddleware,
   validateId,
-  validateIncidentUpdate, // PUT: no exige reporter, bloquea modificar id (P2)
+  validateIncidentUpdate, // PUT: reporter no es obligatorio ni modificable
   validatePriority,
   validateTime,
   controller.update,
 );
-router.patch("/:id/status", validateId, controller.patchIncidentStatus); // Reto 5 (P2)
-router.delete("/:id", validateId, adminMiddleware, controller.remove); // solo admin
+
+router.patch("/:id/status", authMiddleware, validateId, controller.updateStatus);
+
+router.delete("/:id", authMiddleware, adminMiddleware, validateId, controller.remove);
 
 export default router;

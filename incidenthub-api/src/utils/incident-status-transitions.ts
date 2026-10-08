@@ -1,31 +1,30 @@
 import type { IncidentStatus } from "../models/incident.model";
 
 /**
- * Flujo permitido para actualizar el estado de un incidente:
- * OPEN -> IN_PROGRESS -> RESOLVED.
- * RESOLVED es terminal y repetir el mismo estado no cuenta como transición.
+ * Transiciones de estado permitidas (Reto 5):
+ *   OPEN -> IN_PROGRESS -> RESOLVED
+ *   OPEN -> RESOLVED
+ * RESOLVED es terminal: no puede volver a OPEN ni a IN_PROGRESS.
  */
 const VALID_STATUS_TRANSITIONS: Record<IncidentStatus, readonly IncidentStatus[]> = {
-  OPEN: ["IN_PROGRESS"],
+  OPEN: ["IN_PROGRESS", "RESOLVED"],
   IN_PROGRESS: ["RESOLVED"],
   RESOLVED: [],
 };
 
-const isIncidentStatus = (value: unknown): value is IncidentStatus =>
+/** Type guard: ¿el valor es un estado válido? */
+export const isIncidentStatus = (value: unknown): value is IncidentStatus =>
   typeof value === "string" &&
   Object.prototype.hasOwnProperty.call(VALID_STATUS_TRANSITIONS, value);
 
-/**
- * Devuelve si el estado solicitado es una transición permitida desde el estado
- * actual. Acepta unknown para poder validar directamente valores del request.
- */
+/** ¿Se permite pasar de `current` a `next`? */
+export const isValidStatusTransition = (current: unknown, next: unknown): boolean => {
+  if (!isIncidentStatus(current) || !isIncidentStatus(next)) return false;
+  return VALID_STATUS_TRANSITIONS[current].includes(next);
+};
+
+/** Alias para no romper código de P2 que ya usa este nombre. */
 export const canTransitionIncidentStatus = (
   currentStatus: unknown,
   nextStatus: unknown,
-): nextStatus is IncidentStatus => {
-  if (!isIncidentStatus(currentStatus) || !isIncidentStatus(nextStatus)) {
-    return false;
-  }
-
-  return VALID_STATUS_TRANSITIONS[currentStatus].includes(nextStatus);
-};
+): nextStatus is IncidentStatus => isValidStatusTransition(currentStatus, nextStatus);
