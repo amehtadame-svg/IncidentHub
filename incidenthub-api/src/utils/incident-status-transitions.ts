@@ -22,9 +22,3 @@ export const isValidStatusTransition = (current: unknown, next: unknown): boolea
   if (!isIncidentStatus(current) || !isIncidentStatus(next)) return false;
   return VALID_STATUS_TRANSITIONS[current].includes(next);
 };
-
-/** Alias para no romper código de P2 que ya usa este nombre. */
-export const canTransitionIncidentStatus = (
-  currentStatus: unknown,
-  nextStatus: unknown,
-): nextStatus is IncidentStatus => isValidStatusTransition(currentStatus, nextStatus);

@@ -28,7 +28,7 @@ export function validateIncident(
   next: NextFunction
 ): void {
   const { title, description, reporter, location, priority, estimatedMinutes } =
-    req.body as IncidentBody;
+    (req.body ?? {}) as IncidentBody;
 
   const errors: string[] = [];
 
@@ -71,7 +71,7 @@ export function validateIncidentUpdate(
   next: NextFunction
 ): void {
   const { title, description, location, priority, estimatedMinutes } =
-    req.body as IncidentBody;
+    (req.body ?? {}) as IncidentBody;
 
   const errors: string[] = [];
 
@@ -93,7 +93,7 @@ export function validateIncidentUpdate(
     errors.push("estimatedMinutes must be a number");
   }
 
-  if ("id" in req.body) {
+  if ("id" in (req.body ?? {})) {
     errors.push("id cannot be modified");
   }
 

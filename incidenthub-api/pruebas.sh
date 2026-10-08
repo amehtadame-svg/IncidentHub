@@ -2,8 +2,8 @@
 # Pruebas minimas del PDF (seccion 14). Uso:  bash pruebas.sh
 # Con el servidor corriendo (npm run dev). Reinicia el servidor para volver a los datos semilla.
 BASE="${BASE:-http://localhost:3000}"
-ADMIN="${ADMIN:-instructor-token}"      # si P3 aun no cambio los tokens: token-admin-001
-TECH="${TECH:-technician-token}"        # si P3 aun no cambio los tokens: token-tecnico-001
+ADMIN="${ADMIN:-instructor-token}"
+TECH="${TECH:-technician-token}"
 J="Content-Type: application/json"
 PASS=0; FAIL=0
 

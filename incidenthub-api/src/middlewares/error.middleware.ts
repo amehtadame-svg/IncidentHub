@@ -2,38 +2,25 @@ import { NextFunction, Request, Response } from "express";
 import { AppError } from "../errors/app-error";
 
 /**
- * Middleware centralizado de errores (Persona 3 - Infraestructura, 8 pts con AppError).
- *
- * Debe registrarse SIEMPRE al final de app.ts, DESPUES de todas las rutas y
- * del notFoundMiddleware:
- *   app.use(notFoundMiddleware);
- *   app.use(errorMiddleware); // <- ultimo
- *
- * Comportamiento:
- *   - AppError (operacional): responde con su statusCode y mensaje
- *   - Cualquier otro Error: loguea el stack y responde 500 generico
- *     (nunca se filtran detalles internos al cliente)
- *
- * Contrato de respuesta de error (para frontend/P4):
- *   { "status": "error", "message": "<mensaje>" }
+ * Middleware centralizado de errores. Se registra SIEMPRE al final de app.ts.
+ *   - AppError           -> su statusCode y mensaje
+ *   - JSON malformado    -> 400 (error de express.json())
+ *   - cualquier otro     -> 500 genérico (no se exponen detalles internos)
+ * Formato uniforme: { "ok": false, "message": "..." }
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const errorMiddleware = (err: Error, req: Request, res: Response, _next: NextFunction): void => {
   if (err instanceof AppError) {
-    // eslint-disable-next-line no-console
-    console.error(`[AppError] ${req.method} ${req.originalUrl} -> ${err.statusCode} | ${err.message}`);
-    res.status(err.statusCode).json({
-      status: "error",
-      message: err.message,
-    });
+    res.status(err.statusCode).json({ ok: false, message: err.message });
     return;
   }
 
-  // Error inesperado (bug): no exponer detalles internos al cliente
-  // eslint-disable-next-line no-console
-  console.error(`[Error interno] ${req.method} ${req.originalUrl} | ${err.stack ?? err.message}`);
-  res.status(500).json({
-    status: "error",
-    message: "Error interno del servidor",
-  });
+  const parseError = err as Error & { type?: string; status?: number };
+  if (parseError.type === "entity.parse.failed" || parseError.type === "entity.too.large") {
+    res.status(parseError.status ?? 400).json({ ok: false, message: "Invalid JSON body" });
+    return;
+  }
+
+  console.error(`[Internal error] ${req.method} ${req.originalUrl} | ${err.stack ?? err.message}`);
+  res.status(500).json({ ok: false, message: "Internal server error" });
 };

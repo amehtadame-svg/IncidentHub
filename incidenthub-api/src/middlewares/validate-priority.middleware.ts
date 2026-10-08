@@ -14,7 +14,7 @@ export function validatePriority(
   res: Response,
   next: NextFunction
 ): void {
-  const { priority } = req.body;
+   const { priority } = req.body ?? {};
 
   if (!VALID_PRIORITIES.includes(priority)) {
     throw new AppError(

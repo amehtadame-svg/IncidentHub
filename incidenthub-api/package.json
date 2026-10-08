@@ -1,7 +1,7 @@
 {
   "name": "incidenthub-api",
   "version": "1.0.0",
-  "description": "",
+  "description":"IncidentHub API v1 - API REST para la gestión de incidentes tecnológicos",
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

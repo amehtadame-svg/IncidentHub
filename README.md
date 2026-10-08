@@ -1,8 +1,5 @@
 # IncidentHub# IncidentHub API
 
-API REST para registrar, consultar, modificar, atender y eliminar incidentes tecnológicos
-(equipos que no encienden, fallas de red, impresoras, aplicaciones caídas, etc.).
-
 ## Problema que resuelve
 
 Hoy los incidentes se reportan por llamadas, mensajes y conversaciones informales, y no queda
@@ -104,16 +101,17 @@ Error: `{ "ok": false, "message": "Incident not found" }`
 
 ```json
 {
+  {
   "ok": true,
   "data": {
     "total": 7,
     "open": 3,
-    "inProgress": 1,
-    "resolved": 3,
-    "critical": 1,
-    "averageEstimatedMinutes": 41,
-    "totalEstimatedMinutes": 285,
-    "byPriority": { "LOW": 2, "MEDIUM": 2, "HIGH": 2, "CRITICAL": 1 }
+    "inProgress": 2,
+    "resolved": 2,
+    "critical": 2,
+    "averageEstimatedMinutes": 47,
+    "totalEstimatedMinutes": 330,
+    "byPriority": { "LOW": 1, "MEDIUM": 2, "HIGH": 2, "CRITICAL": 2 }
   }
 }
 ```
@@ -257,4 +255,25 @@ Los errores también salen siempre con el mismo formato, porque pasan por un ún
 Y es más fácil probar y explicar cada pieza por separado.
 
 ## Evidencias de pruebas
-ejecutar el comando en una terminal 2 ADMIN=token-admin-001 TECH=token-tecnico-001 bash pruebas.sh
+✅ 1  GET todos                               esperado 200 obtuvo 200 {"ok":true,"total":7,"data":[{"id":1,"title":"Proyector sin señal","description
+✅ 2  GET existente (id 1)                    esperado 200 obtuvo 200 {"ok":true,"data":{"id":1,"title":"Proyector sin señal","description":"El proye
+✅ 3  GET inexistente                         esperado 404 obtuvo 404 {"ok":false,"message":"Incident not found"}
+✅ 4  GET id abc                              esperado 400 obtuvo 400 {"ok":false,"message":"Invalid incident id"}
+✅ 5  POST valido                             esperado 201 obtuvo 201 {"ok":true,"data":{"id":8,"title":"Prueba","description":"desc","reporter":"Test
+✅ 6  POST sin titulo                         esperado 400 obtuvo 400 {"ok":false,"message":"title is required and must be a non-empty string"}
+✅ 7  POST prioridad invalida                 esperado 400 obtuvo 400 {"ok":false,"message":"Invalid priority. Allowed values: LOW, MEDIUM, HIGH, CRIT
+✅ 8  POST minutos negativos                  esperado 400 obtuvo 400 {"ok":false,"message":"estimatedMinutes debe ser un número mayor que 0 y menor 
+✅ 9  POST CRITICAL > 60 min                  esperado 400 obtuvo 400 {"ok":false,"message":"Los incidentes CRITICAL deben tener un tiempo estimado me
+✅ 10 PUT existente                           esperado 200 obtuvo 200 {"ok":true,"data":{"id":8,"title":"Pantalla sin imagen","description":"d","repor
+✅ 11 PUT inexistente                         esperado 404 obtuvo 404 {"ok":false,"message":"Incident not found"}
+✅ 12 PATCH OPEN -> IN_PROGRESS               esperado 200 obtuvo 200 {"ok":true,"data":{"id":8,"title":"Pantalla sin imagen","description":"d","repor
+✅ 13 PATCH IN_PROGRESS -> RESOLVED           esperado 200 obtuvo 200 {"ok":true,"data":{"id":8,"title":"Pantalla sin imagen","description":"d","repor
+✅ 14 PATCH RESOLVED -> OPEN                  esperado 400 obtuvo 400 {"ok":false,"message":"Invalid status transition: RESOLVED -> OPEN"}
+✅ 14b PATCH status invalido                  esperado 400 obtuvo 400 {"ok":false,"message":"Invalid status. Allowed: OPEN, IN_PROGRESS, RESOLVED"}
+✅ 15 DELETE sin token                        esperado 401 obtuvo 401 {"ok":false,"message":"Authentication required: send 'Authorization: Bearer <tok
+✅ 16 DELETE technician-token                 esperado 403 obtuvo 403 {"ok":false,"message":"Forbidden: administrator permissions required"}
+✅ 17 DELETE instructor-token                 esperado 204 obtuvo 204 
+✅ 18 Ruta inexistente                        esperado 404 obtuvo 404 {"ok":false,"message":"Route not found"}
+✅ 19 GET /critical                           esperado 200 obtuvo 200 {"ok":true,"total":2,"data":[{"id":3,"title":"Servidor de correo no responde","d
+✅ 19b GET /pending                           esperado 200 obtuvo 200 {"ok":true,"total":5,"data":[{"id":1,"title":"Proyector sin señal","description
+✅ 20 GET /stats                              esperado 200 obtuvo 200 {"ok":true,"data":{"total":7,"open":3,"inProgress":2,"resolved":2,"critical":2,"
