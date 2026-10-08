@@ -1,28 +1,27 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { AppError } from "../errors/app-error";
 import { IncidentPriority } from "../models/incident.model";
 
-/**
- * STUB funcional creado por Persona 4 para avanzar en paralelo (P2 aún no
- * entrega). Persona 2 (Cristian) debe consolidar este middleware.
- *
- * Valida que body.priority sea una prioridad permitida por el modelo de P1:
- * LOW | MEDIUM | HIGH | CRITICAL.
- */
-const ALLOWED_PRIORITIES: IncidentPriority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+const VALID_PRIORITIES: IncidentPriority[] = [
+  "LOW",
+  "MEDIUM",
+  "HIGH",
+  "CRITICAL",
+];
 
-export const validatePriorityMiddleware = (req: Request, _res: Response, next: NextFunction): void => {
-  const body = req.body ?? {};
+export function validatePriority(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const { priority } = req.body;
 
-  if (!ALLOWED_PRIORITIES.includes(body.priority)) {
-    next(
-      new AppError(
-        400,
-        `Prioridad inválida: '${body.priority}'. Permitidas: ${ALLOWED_PRIORITIES.join(", ")}`,
-      ),
+  if (!VALID_PRIORITIES.includes(priority)) {
+    throw new AppError(
+      400,
+      `Invalid priority. Allowed values: ${VALID_PRIORITIES.join(", ")}`
     );
-    return;
   }
 
   next();
-};
+}

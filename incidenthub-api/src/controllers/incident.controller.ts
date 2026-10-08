@@ -150,15 +150,16 @@ export const create = (req: Request, res: Response): void => {
 
 // ── PUT /api/incidents/:id ──────────────────────────────────────────────────
 // Reemplazo completo de los campos editables; conserva id y createdAt.
-// Si el body trae 'status' debe ser un IncidentStatus válido (400 si no);
-// si no viene, se conserva el estado actual.
+// Acoplado a validateIncidentUpdate (P2): "reporter" es OPCIONAL en PUT —
+// si no viene, se conserva el actual. Si el body trae 'status' debe ser un
+// IncidentStatus válido (400 si no); si no viene, se conserva el actual.
 export const update = (req: Request, res: Response): void => {
   const id = Number(req.params.id);
   const index = findIndexById(id);
   if (index === -1) {
     throw new AppError(404, `Incidente con id ${id} no encontrado`);
   }
-  const dto = req.body as CreateIncidentDto;
+  const body = req.body as Partial<CreateIncidentDto>;
   const current = incidents[index];
 
   let status = current.status;
@@ -174,12 +175,15 @@ export const update = (req: Request, res: Response): void => {
 
   incidents[index] = {
     ...current,
-    title: dto.title.trim(),
-    description: dto.description.trim(),
-    reporter: dto.reporter.trim(),
-    location: dto.location.trim(),
-    priority: dto.priority,
-    estimatedMinutes: dto.estimatedMinutes,
+    title: body.title!.trim(), // garantizado por validateIncidentUpdate (P2)
+    description: body.description!.trim(), // garantizado por validateIncidentUpdate (P2)
+    reporter:
+      typeof body.reporter === "string" && body.reporter.trim().length > 0
+        ? body.reporter.trim()
+        : current.reporter, // reporter opcional en PUT: se conserva el actual
+    location: body.location!.trim(), // garantizado por validateIncidentUpdate (P2)
+    priority: body.priority!, // garantizado por validatePriority (P2)
+    estimatedMinutes: body.estimatedMinutes!, // garantizado por validateIncidentUpdate + validateTime (P2)
     status,
   };
   res.status(200).json(incidents[index]);
