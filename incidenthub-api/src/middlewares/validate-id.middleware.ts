@@ -1,19 +1,26 @@
-import type { RequestHandler } from "express";
+import type { NextFunction, Request, RequestHandler, Response } from "express";
+import { AppError } from "../errors/app-error";
 
 const POSITIVE_INTEGER_ID = /^[1-9]\d*$/;
 
-/** Valida y normaliza el ID positivo recibido en los parámetros de ruta. */
-export const validateId: RequestHandler = (req, res, next): void => {
-  const rawId = req.params.id;
+/**
+ * Valida y normaliza el ID positivo recibido en los parámetros de ruta.
+ *
+ * Entrega real de P2 (Cristian, rama arena/f03de487). Acoplamiento de la
+ * integración: los errores pasan por AppError (contrato de errores de P3) y
+ * el id normalizado se guarda en res.locals.incidentId para los controllers.
+ */
+export const validateId: RequestHandler = (req: Request, res: Response, next: NextFunction): void => {
+  const rawId = req.params.id as string;
 
   if (typeof rawId !== "string" || !POSITIVE_INTEGER_ID.test(rawId)) {
-    res.status(400).json({ message: "El ID debe ser un entero positivo." });
+    next(new AppError(400, "El ID debe ser un entero positivo."));
     return;
   }
 
   const id = Number(rawId);
   if (!Number.isSafeInteger(id)) {
-    res.status(400).json({ message: "El ID debe ser un entero positivo seguro." });
+    next(new AppError(400, "El ID debe ser un entero positivo seguro."));
     return;
   }
 
