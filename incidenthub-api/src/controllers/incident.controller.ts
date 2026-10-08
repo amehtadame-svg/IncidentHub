@@ -1,19 +1,22 @@
-import { Request, Response } from "express";
+import type { Request, RequestHandler, Response } from "express";
 import { incidents } from "../data/incidents.data";
 import { CreateIncidentDto } from "../dtos/incident.dto";
 import { Incident, IncidentPriority, IncidentStatus } from "../models/incident.model";
 import { AppError } from "../errors/app-error";
-import { isIncidentStatus, isValidStatusTransition } from "../utils/status-transitions";
+import { canTransitionIncidentStatus } from "../utils/incident-status-transitions";
 
 /**
  * Lógica de negocio de cada endpoint (Persona 4 - 35 pts).
  *
- * Consume: Model/DTO/Data de P1, AppError de P3 y (a través de las rutas)
- * las validaciones de P2. Los datos viven en memoria (array semilla de P1).
+ * Consume: Model/DTO/Data de P1, AppError de P3, validaciones de P2 y la
+ * lógica reutilizable de transiciones de estado de P2 (Reto 5). Los datos
+ * viven en memoria (array semilla de P1).
  *
  * Contratos de respuesta:
  *   - Éxito: 200 (GET/PUT/PATCH), 201 (POST), 204 sin body (DELETE)
  *   - Error: AppError -> errorMiddleware -> { "status": "error", "message": ... }
+ *   - Los controllers reciben el id ya normalizado en res.locals.incidentId
+ *     (lo setea validateId de P2).
  */
 
 const findIndexById = (id: number): number => incidents.findIndex((i) => i.id === id);
@@ -22,6 +25,10 @@ const nextId = (): number => incidents.reduce((max, i) => Math.max(max, i.id), 0
 
 /** Orden de severidad para el sort por prioridad */
 const PRIORITY_ORDER: Record<IncidentPriority, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
+
+/** Type guard local para validar el campo 'status' en PUT (P4). */
+const isIncidentStatus = (value: unknown): value is IncidentStatus =>
+  value === "OPEN" || value === "IN_PROGRESS" || value === "RESOLVED";
 
 // ── GET /api/incidents ──────────────────────────────────────────────────────
 // Query params opcionales (Persona 4 - consultas):
@@ -119,8 +126,8 @@ export const getStats = (_req: Request, res: Response): void => {
 };
 
 // ── GET /api/incidents/:id ──────────────────────────────────────────────────
-export const getById = (req: Request, res: Response): void => {
-  const id = Number(req.params.id);
+export const getById = (_req: Request, res: Response): void => {
+  const id: number = res.locals.incidentId; // normalizado por validateId (P2)
   const incident = incidents.find((i) => i.id === id);
   if (!incident) {
     throw new AppError(404, `Incidente con id ${id} no encontrado`);
@@ -154,7 +161,7 @@ export const create = (req: Request, res: Response): void => {
 // si no viene, se conserva el actual. Si el body trae 'status' debe ser un
 // IncidentStatus válido (400 si no); si no viene, se conserva el actual.
 export const update = (req: Request, res: Response): void => {
-  const id = Number(req.params.id);
+  const id: number = res.locals.incidentId; // normalizado por validateId (P2)
   const index = findIndexById(id);
   if (index === -1) {
     throw new AppError(404, `Incidente con id ${id} no encontrado`);
@@ -190,39 +197,36 @@ export const update = (req: Request, res: Response): void => {
 };
 
 // ── PATCH /api/incidents/:id/status ─────────────────────────────────────────
-// Reto 5: solo transiciones de estado válidas (ver utils/status-transitions).
-export const updateStatus = (req: Request, res: Response): void => {
-  const id = Number(req.params.id);
-  const index = findIndexById(id);
-  if (index === -1) {
-    throw new AppError(404, `Incidente con id ${id} no encontrado`);
+// Reto 5 — entrega real de P2 (Cristian): transiciones estrictas
+// OPEN -> IN_PROGRESS -> RESOLVED (RESOLVED es terminal; no se permite
+// OPEN -> RESOLVED directo ni repetir estado). Usa el id normalizado de
+// res.locals.incidentId (validateId) y canTransitionIncidentStatus (P2).
+// Acoplado al contrato de errores de P3 (AppError).
+export const patchIncidentStatus: RequestHandler = (req, res): void => {
+  const incidentId: number = res.locals.incidentId;
+  const incident = incidents.find((current) => current.id === incidentId);
+
+  if (!incident) {
+    throw new AppError(404, `No existe un incidente con ID ${incidentId}.`);
   }
 
-  const status = req.body?.status;
-  if (!isIncidentStatus(status)) {
+  const requestedStatus: unknown = req.body?.status;
+  if (!canTransitionIncidentStatus(incident.status, requestedStatus)) {
     throw new AppError(
       400,
-      `El campo 'status' es obligatorio y debe ser uno de: OPEN, IN_PROGRESS, RESOLVED (recibido: ${JSON.stringify(status)})`,
+      `No se permite la transición de ${incident.status} a ${String(requestedStatus)}. ` +
+        "Transiciones válidas: OPEN->IN_PROGRESS, IN_PROGRESS->RESOLVED",
     );
   }
 
-  const current = incidents[index];
-  if (!isValidStatusTransition(current.status, status)) {
-    throw new AppError(
-      400,
-      `Transición de estado inválida (Reto 5): ${current.status} -> ${status}. ` +
-        "Transiciones válidas: OPEN->IN_PROGRESS, OPEN->RESOLVED, IN_PROGRESS->RESOLVED",
-    );
-  }
-
-  incidents[index] = { ...current, status };
-  res.status(200).json(incidents[index]);
+  incident.status = requestedStatus;
+  res.status(200).json(incident);
 };
 
 // ── DELETE /api/incidents/:id ───────────────────────────────────────────────
 // Solo admin: la ruta aplica authMiddleware + adminMiddleware (Persona 3).
-export const remove = (req: Request, res: Response): void => {
-  const id = Number(req.params.id);
+export const remove = (_req: Request, res: Response): void => {
+  const id: number = res.locals.incidentId; // normalizado por validateId (P2)
   const index = findIndexById(id);
   if (index === -1) {
     throw new AppError(404, `Incidente con id ${id} no encontrado`);
