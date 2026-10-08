@@ -10,9 +10,9 @@ import { validateTime } from "../middlewares/validate-time.middleware";
 /**
  * Definición de rutas y orden de middlewares (Persona 4 - 35 pts).
  *
- * Middlewares de validación: entrega REAL de P2 (rama ameht) — reemplazan
- * los stubs que P4 usó para avanzar en paralelo. validate-time se implementó
- * en la integración (P2 pendiente) con el Reto 4 documentado.
+ * Middlewares de validación: entrega REAL de P2 (ramas ameht + Cristian).
+ * PATCH /:id/status usa patchIncidentStatus de P2 (Reto 5, transiciones
+ * estrictas OPEN -> IN_PROGRESS -> RESOLVED).
  *
  * ⚠️ ORDEN CRÍTICO: las rutas estáticas de los retos (/critical, /pending,
  * /stats) van ANTES de /:id; si no, Express las capturaría como si fueran
@@ -40,7 +40,7 @@ router.put(
   validateTime,
   controller.update,
 );
-router.patch("/:id/status", validateId, controller.updateStatus); // Reto 5
+router.patch("/:id/status", validateId, controller.patchIncidentStatus); // Reto 5 (P2)
 router.delete("/:id", validateId, adminMiddleware, controller.remove); // solo admin
 
 export default router;
